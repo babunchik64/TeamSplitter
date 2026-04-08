@@ -3,6 +3,7 @@ package com.app.teamsplitter
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -11,6 +12,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,14 +21,15 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.app.teamsplitter.ui.NavRoutes
 import com.app.teamsplitter.ui.screens.history.HistoryScreen
-import com.app.teamsplitter.ui.screens.players.PlayersScreen
 import com.app.teamsplitter.ui.screens.players.PlayerEditScreen
+import com.app.teamsplitter.ui.screens.players.PlayersScreen
 import com.app.teamsplitter.ui.screens.session.SessionScreen
 import com.app.teamsplitter.ui.theme.TeamSplitterTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent {
             TeamSplitterTheme {
                 MainScreen()
@@ -41,6 +45,7 @@ fun MainScreen() {
     val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0.dp),
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
