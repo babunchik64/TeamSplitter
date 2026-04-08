@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import com.app.teamsplitter.ui.NavRoutes
 import com.app.teamsplitter.ui.screens.history.HistoryScreen
 import com.app.teamsplitter.ui.screens.players.PlayersScreen
+import com.app.teamsplitter.ui.screens.players.PlayerEditScreen
 import com.app.teamsplitter.ui.screens.session.SessionScreen
 import com.app.teamsplitter.ui.theme.TeamSplitterTheme
 
@@ -97,6 +98,13 @@ fun MainScreen() {
             }
             composable(NavRoutes.SESSION) {
                 SessionScreen(navController = navController)
+            }
+            composable(NavRoutes.PLAYER_ADD) {
+                PlayerEditScreen(navController = navController, playerId = null)
+            }
+            composable(NavRoutes.PLAYER_EDIT) { backStackEntry ->
+                val playerId = backStackEntry.arguments?.getString("playerId")?.toIntOrNull()
+                PlayerEditScreen(navController = navController, playerId = playerId)
             }
             composable(NavRoutes.HISTORY) {
                 HistoryScreen(navController = navController)
