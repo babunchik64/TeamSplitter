@@ -11,6 +11,6 @@ import androidx.navigation.NavController
 @Composable
 fun HistoryScreen(navController: NavController) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Экран истории")
+        Text("History screen")
     }
 }

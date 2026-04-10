@@ -49,8 +49,8 @@ fun MainScreen() {
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Person, contentDescription = "Игроки") },
-                    label = { Text("Игроки") },
+                    icon = { Icon(Icons.Filled.Person, contentDescription = "Players") },
+                    label = { Text("Players") },
                     selected = currentRoute == NavRoutes.PLAYERS,
                     onClick = {
                         navController.navigate(NavRoutes.PLAYERS) {
@@ -63,8 +63,8 @@ fun MainScreen() {
                     }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Сессия") },
-                    label = { Text("Сессия") },
+                    icon = { Icon(Icons.Filled.Home, contentDescription = "Session") },
+                    label = { Text("Session") },
                     selected = currentRoute == NavRoutes.SESSION,
                     onClick = {
                         navController.navigate(NavRoutes.SESSION) {
@@ -77,8 +77,8 @@ fun MainScreen() {
                     }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.DateRange, contentDescription = "История") },
-                    label = { Text("История") },
+                    icon = { Icon(Icons.Filled.DateRange, contentDescription = "Story") },
+                    label = { Text("Story") },
                     selected = currentRoute == NavRoutes.HISTORY,
                     onClick = {
                         navController.navigate(NavRoutes.HISTORY) {

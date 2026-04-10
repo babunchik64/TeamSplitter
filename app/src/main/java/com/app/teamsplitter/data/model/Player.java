@@ -20,6 +20,19 @@ public class Player {
         this.comment = comment;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Player player = (Player) o;
+        return id == player.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return id;
+    }
+
     // Getters
     public int getId() { return id; }
     public String getName() { return name; }

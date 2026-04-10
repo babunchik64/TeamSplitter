@@ -40,7 +40,7 @@ fun PlayersScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Игроки", fontWeight = FontWeight.Bold) },
+                title = { Text("Players", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
@@ -55,7 +55,7 @@ fun PlayersScreen(navController: NavController) {
             ) {
                 Icon(
                     Icons.Filled.Add,
-                    contentDescription = "Добавить игрока",
+                    contentDescription = "Add player",
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
             }
@@ -77,13 +77,13 @@ fun PlayersScreen(navController: NavController) {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "Нет игроков",
+                        "No players",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.outline
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Нажмите + чтобы добавить",
+                        "Click + to add",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -112,19 +112,19 @@ fun PlayersScreen(navController: NavController) {
     playerToDelete?.let { player ->
         AlertDialog(
             onDismissRequest = { playerToDelete = null },
-            title = { Text("Удалить игрока?") },
-            text = { Text("${player.name} будет удалён безвозвратно.") },
+            title = { Text("Remove player?") },
+            text = { Text("${player.name} will be permanently deleted.") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.delete(player)
                     playerToDelete = null
                 }) {
-                    Text("Удалить", color = MaterialTheme.colorScheme.error)
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { playerToDelete = null }) {
-                    Text("Отмена")
+                    Text("Cancel")
                 }
             }
         )
@@ -198,14 +198,14 @@ fun PlayerCard(
             IconButton(onClick = onEdit) {
                 Icon(
                     Icons.Filled.Edit,
-                    contentDescription = "Редактировать",
+                    contentDescription = "Edit",
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Filled.Delete,
-                    contentDescription = "Удалить",
+                    contentDescription = "Delete",
                     tint = MaterialTheme.colorScheme.error
                 )
             }

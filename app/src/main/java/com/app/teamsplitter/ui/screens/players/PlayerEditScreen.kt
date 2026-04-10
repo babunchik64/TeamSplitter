@@ -77,7 +77,7 @@ fun PlayerEditScreen(navController: NavController, playerId: Int?) {
             TopAppBar(
                 title = {
                     Text(
-                        if (playerId == null) "Добавить игрока" else "Редактировать",
+                        if (playerId == null) "Add player" else "Edit",
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -85,7 +85,7 @@ fun PlayerEditScreen(navController: NavController, playerId: Int?) {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             Icons.Filled.ArrowBack,
-                            contentDescription = "Назад",
+                            contentDescription = "Back",
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
@@ -119,7 +119,7 @@ fun PlayerEditScreen(navController: NavController, playerId: Int?) {
                 if (photoPath != null) {
                     AsyncImage(
                         model = photoPath,
-                        contentDescription = "Фото игрока",
+                        contentDescription = "Player photo",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -132,7 +132,7 @@ fun PlayerEditScreen(navController: NavController, playerId: Int?) {
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            "Добавить фото",
+                            "Add photo",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -144,7 +144,7 @@ fun PlayerEditScreen(navController: NavController, playerId: Int?) {
 
             if (photoPath != null) {
                 TextButton(onClick = { photoPath = null }) {
-                    Text("Удалить фото", color = MaterialTheme.colorScheme.error)
+                    Text("Delete photo", color = MaterialTheme.colorScheme.error)
                 }
             } else {
                 Spacer(modifier = Modifier.height(32.dp))
@@ -159,12 +159,12 @@ fun PlayerEditScreen(navController: NavController, playerId: Int?) {
                     name = it
                     nameError = false
                 },
-                label = { Text("Имя игрока *") },
+                label = { Text("Player name *") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 isError = nameError,
                 supportingText = {
-                    if (nameError) Text("Введите имя игрока")
+                    if (nameError) Text("Enter player name")
                 },
                 singleLine = true
             )
@@ -175,7 +175,7 @@ fun PlayerEditScreen(navController: NavController, playerId: Int?) {
             OutlinedTextField(
                 value = comment,
                 onValueChange = { comment = it },
-                label = { Text("Комментарий") },
+                label = { Text("Comment") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 minLines = 3,
@@ -209,7 +209,7 @@ fun PlayerEditScreen(navController: NavController, playerId: Int?) {
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    if (playerId == null) "Добавить" else "Сохранить",
+                    if (playerId == null) "Add player" else "Save",
                     style = MaterialTheme.typography.titleMedium
                 )
             }
