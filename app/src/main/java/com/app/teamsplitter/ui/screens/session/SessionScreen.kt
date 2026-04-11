@@ -9,6 +9,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -20,18 +23,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.app.teamsplitter.data.model.Player
+import com.app.teamsplitter.viewmodel.HistoryViewModel
 import com.app.teamsplitter.viewmodel.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -275,6 +282,7 @@ fun SplitTeamsStep(
     selectedPlayers: List<Player>,
     onBack: () -> Unit
 ) {
+    val historyViewModel: HistoryViewModel = viewModel()
     val teamNames = remember { mutableStateListOf("Team A", "Team B") }
     val teamPlayers = remember {
         mutableStateListOf(
@@ -288,6 +296,8 @@ fun SplitTeamsStep(
     var dragPosition by remember { mutableStateOf(Offset.Zero) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     val teamBounds = remember { mutableMapOf<Int, androidx.compose.ui.geometry.Rect>() }
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var sessionSaved by remember { mutableStateOf(false) }
 
     fun findPlayerTeam(player: Player): Int? {
         teamPlayers.forEachIndexed { index, players ->
@@ -317,6 +327,43 @@ fun SplitTeamsStep(
         teamPlayers.forEach { it.removeAll { p -> p.id == player.id } }
     }
 
+    // Диалог сохранения
+    if (showSaveDialog) {
+        val assigned = teamPlayers.sumOf { it.size }
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("Save session?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("The following will be saved:")
+                    Text("• Players: ${selectedPlayers.size}")
+                    Text("• Teams: ${teamNames.size}")
+                    Text("• Assigned: $assigned players")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val teamPlayersCopy = teamPlayers.map { it.toList() }
+                    historyViewModel.saveSession(
+                        selectedPlayers.toList(),
+                        teamNames.toList(),
+                        teamPlayersCopy,
+                        null
+                    )
+                    sessionSaved = true
+                    showSaveDialog = false
+                }) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
@@ -337,9 +384,32 @@ fun SplitTeamsStep(
                     ),
                     windowInsets = TopAppBarDefaults.windowInsets,
                     actions = {
+                        if (sessionSaved) {
+                            Text(
+                                "✓ Saved",
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        } else {
+                            TextButton(onClick = { showSaveDialog = true }) {
+                                Text("Save", color = MaterialTheme.colorScheme.onPrimary)
+                            }
+                        }
                         TextButton(onClick = {
                             teamPlayers.forEach { it.clear() }
                             val shuffled = selectedPlayers.shuffled()
+                            val playersPerTeam = Math.ceil(shuffled.size.toDouble() / teamPlayers.size).toInt()
+
+                            // Якщо не вміщуються — додаємо команди автоматично
+                            if (playersPerTeam > maxPlayersPerTeam) {
+                                val neededTeams = Math.ceil(shuffled.size.toDouble() / maxPlayersPerTeam).toInt()
+                                while (teamPlayers.size < neededTeams) {
+                                    teamNames.add("Team ${('A' + teamPlayers.size)}")
+                                    teamPlayers.add(mutableStateListOf())
+                                }
+                            }
+
                             shuffled.forEachIndexed { index, player ->
                                 teamPlayers[index % teamPlayers.size].add(player)
                             }
@@ -425,7 +495,7 @@ fun SplitTeamsStep(
                                             Modifier.clickable { showMenu = true }
                                         } else Modifier
                                     )
-                                    .padding(horizontal = 10.dp),
+                                    .padding(horizontal = 12.dp),
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 if (assigned) {
@@ -435,7 +505,7 @@ fun SplitTeamsStep(
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(28.dp)
+                                                .size(36.dp)
                                                 .clip(CircleShape)
                                                 .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
                                             contentAlignment = Alignment.Center
@@ -457,7 +527,7 @@ fun SplitTeamsStep(
                                 } else {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
                                         Box(
                                             modifier = Modifier
@@ -476,7 +546,7 @@ fun SplitTeamsStep(
                                             } else {
                                                 Text(
                                                     text = player.name.first().uppercase(),
-                                                    style = MaterialTheme.typography.labelSmall,
+                                                    style = MaterialTheme.typography.titleMedium,
                                                     color = MaterialTheme.colorScheme.onPrimary,
                                                     fontWeight = FontWeight.Bold
                                                 )
@@ -484,7 +554,7 @@ fun SplitTeamsStep(
                                         }
                                         Text(
                                             text = player.name,
-                                            style = MaterialTheme.typography.labelSmall,
+                                            style = MaterialTheme.typography.bodyLarge,
                                             fontWeight = FontWeight.Medium,
                                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                                             maxLines = 1
@@ -551,7 +621,6 @@ fun SplitTeamsStep(
                             val nextLetter = letters.firstOrNull { letter ->
                                 teamNames.none { it.endsWith(" $letter") }
                             } ?: letters.last()
-
                             teamNames.add("Team $nextLetter")
                             teamPlayers.add(mutableStateListOf())
                         },
@@ -591,13 +660,12 @@ fun SplitTeamsStep(
                                 onRemovePlayer = { player ->
                                     teamPlayers[firstIndex].removeAll { it.id == player.id }
                                 },
-                                onDelete = if (firstIndex > 1) {
-                                    {
-                                        teamPlayers[firstIndex].clear()
-                                        teamPlayers.removeAt(firstIndex)
-                                        teamNames.removeAt(firstIndex)
-                                    }
-                                } else null
+                                onRename = { newName -> teamNames[firstIndex] = newName },
+                                onDelete = if (firstIndex > 1) {{
+                                    teamPlayers[firstIndex].clear()
+                                    teamPlayers.removeAt(firstIndex)
+                                    teamNames.removeAt(firstIndex)
+                                }} else null
                             )
 
                             if (hasSecond) {
@@ -615,13 +683,12 @@ fun SplitTeamsStep(
                                     onRemovePlayer = { player ->
                                         teamPlayers[secondIndex].removeAll { it.id == player.id }
                                     },
-                                    onDelete = if (secondIndex > 1) {
-                                        {
-                                            teamPlayers[secondIndex].clear()
-                                            teamPlayers.removeAt(secondIndex)
-                                            teamNames.removeAt(secondIndex)
-                                        }
-                                    } else null
+                                    onRename = { newName -> teamNames[secondIndex] = newName },
+                                    onDelete = if (secondIndex > 1) {{
+                                        teamPlayers[secondIndex].clear()
+                                        teamPlayers.removeAt(secondIndex)
+                                        teamNames.removeAt(secondIndex)
+                                    }} else null
                                 )
                             } else {
                                 Spacer(modifier = Modifier.weight(1f))
@@ -638,39 +705,48 @@ fun SplitTeamsStep(
                 modifier = Modifier
                     .offset {
                         androidx.compose.ui.unit.IntOffset(
-                            (pos.x - 50.dp.toPx()).toInt(),
-                            (pos.y - 24.dp.toPx()).toInt()
+                            (pos.x - 60.dp.toPx()).toInt(),
+                            (pos.y - 28.dp.toPx()).toInt()
                         )
                     }
                     .zIndex(10f)
-                    .shadow(8.dp, RoundedCornerShape(12.dp))
+                    .shadow(12.dp, RoundedCornerShape(12.dp))
                     .background(
                         MaterialTheme.colorScheme.primary,
                         RoundedCornerShape(12.dp)
                     )
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(32.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = player.name.first().uppercase(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (player.photoPath != null) {
+                            AsyncImage(
+                                model = player.photoPath,
+                                contentDescription = player.name,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = player.name.first().uppercase(),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                     Text(
-                        player.name,
-                        style = MaterialTheme.typography.labelMedium,
+                        text = player.name,
+                        style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onPrimary,
                         fontWeight = FontWeight.Bold
                     )
@@ -688,9 +764,13 @@ fun SimpleTeamCard(
     maxPlayers: Int,
     isDragTarget: Boolean,
     onRemovePlayer: (Player) -> Unit,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    onRename: (String) -> Unit = {}
 ) {
     val isFull = players.size >= maxPlayers
+    var isEditing by remember { mutableStateOf(false) }
+    var nameValue by remember(teamName) { mutableStateOf(teamName) }
+    val focusRequester = remember { FocusRequester() }
 
     Card(
         modifier = modifier,
@@ -708,18 +788,42 @@ fun SimpleTeamCard(
             androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
         else null
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = teamName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                if (isEditing) {
+                    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+                    BasicTextField(
+                        value = nameValue,
+                        onValueChange = { nameValue = it },
+                        textStyle = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        ),
+                        singleLine = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                        keyboardActions = KeyboardActions(onDone = {
+                            onRename(nameValue)
+                            isEditing = false
+                        }),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                    )
+                } else {
+                    Text(
+                        text = teamName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { isEditing = true }
+                    )
+                }
                 if (onDelete != null) {
                     IconButton(
                         onClick = onDelete,
@@ -773,15 +877,15 @@ fun SimpleTeamCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 3.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(MaterialTheme.colorScheme.surface)
-                            .padding(6.dp),
+                            .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(24.dp)
+                                .size(22.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.primaryContainer),
                             contentAlignment = Alignment.Center
@@ -796,28 +900,30 @@ fun SimpleTeamCard(
                             } else {
                                 Text(
                                     text = player.name.first().uppercase(),
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = player.name,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f),
-                            maxLines = 1
+                            maxLines = 2,
+                            softWrap = true
                         )
                         IconButton(
                             onClick = { onRemovePlayer(player) },
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = "Put away",
+                                contentDescription = "Remove",
                                 tint = MaterialTheme.colorScheme.outline,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }

@@ -14,13 +14,13 @@ import androidx.room.PrimaryKey;
                         onDelete = ForeignKey.CASCADE
                 ),
                 @ForeignKey(
-                        entity = Team.class,
+                        entity = SessionTeam.class,   // ← было Team.class
                         parentColumns = "id",
                         childColumns = "homeTeamId",
                         onDelete = ForeignKey.CASCADE
                 ),
                 @ForeignKey(
-                        entity = Team.class,
+                        entity = SessionTeam.class,   // ← было Team.class
                         parentColumns = "id",
                         childColumns = "awayTeamId",
                         onDelete = ForeignKey.CASCADE
