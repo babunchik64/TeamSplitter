@@ -19,7 +19,9 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import coil.compose.AsyncImage
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -211,7 +213,12 @@ fun SessionCard(
                         ) {
                             rowTeams.forEach { team ->
                                 Box(modifier = Modifier.weight(1f)) {
-                                    TeamRow(team = team, players = players, sessionPlayers = sessionPlayers)
+                                    val wins = matches.count { m ->
+                                        m.status == Match.Status.FINISHED &&
+                                                (m.homeTeamId == team.id && m.homeScore > m.awayScore ||
+                                                        m.awayTeamId == team.id && m.awayScore > m.homeScore)
+                                    }
+                                    TeamRow(team = team, players = players, sessionPlayers = sessionPlayers, wins = wins)
                                 }
                             }
                             // Якщо непарна кількість команд — заповнюємо пустим місцем
@@ -279,7 +286,8 @@ fun SessionCard(
 fun TeamRow(
     team: SessionTeam,
     players: List<Player>,
-    sessionPlayers: List<SessionPlayer>
+    sessionPlayers: List<SessionPlayer>,
+    wins: Int = 0
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -315,6 +323,22 @@ fun TeamRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline
                 )
+                if (wins > 0) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = "${wins}W",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
             Icon(
                 if (expanded) Icons.Filled.KeyboardArrowUp
@@ -341,12 +365,21 @@ fun TeamRow(
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = player.getName().firstOrNull()?.uppercase() ?: "?",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        if (player.photoPath != null) {
+                            AsyncImage(
+                                model = player.photoPath,
+                                contentDescription = player.getName(),
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                text = player.getName().firstOrNull()?.uppercase() ?: "?",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
@@ -483,12 +516,17 @@ fun AddMatchDialog(
     var awayScore by remember { mutableStateOf("") }
     var hasScore by remember { mutableStateOf(false) }
 
+    val homeInt = homeScore.toIntOrNull()
+    val awayInt = awayScore.toIntOrNull()
+    val scoreError = if (hasScore && homeInt != null && awayInt != null)
+        volleyballScoreError(homeInt, awayInt) else null
+    val scoreValid = !hasScore || (homeInt != null && awayInt != null && scoreError == null)
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Add match") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Выбор домашней команды
                 Text("Home team", style = MaterialTheme.typography.labelMedium)
                 TeamSelector(
                     teams = teams,
@@ -496,7 +534,6 @@ fun AddMatchDialog(
                     onSelect = { homeTeamIndex = it }
                 )
 
-                // Выбор гостевой команды
                 Text("Away team", style = MaterialTheme.typography.labelMedium)
                 TeamSelector(
                     teams = teams,
@@ -504,7 +541,6 @@ fun AddMatchDialog(
                     onSelect = { awayTeamIndex = it }
                 )
 
-                // Добавить счёт?
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -526,7 +562,8 @@ fun AddMatchDialog(
                             onValueChange = { homeScore = it.filter { c -> c.isDigit() } },
                             label = { Text("Home") },
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            singleLine = true,
+                            isError = scoreError != null
                         )
                         Text(":", fontWeight = FontWeight.Bold)
                         OutlinedTextField(
@@ -534,7 +571,15 @@ fun AddMatchDialog(
                             onValueChange = { awayScore = it.filter { c -> c.isDigit() } },
                             label = { Text("Away") },
                             modifier = Modifier.weight(1f),
-                            singleLine = true
+                            singleLine = true,
+                            isError = scoreError != null
+                        )
+                    }
+                    if (scoreError != null) {
+                        Text(
+                            text = scoreError,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelSmall
                         )
                     }
                 }
@@ -547,16 +592,16 @@ fun AddMatchDialog(
                         val homeTeam = teams[homeTeamIndex]
                         val awayTeam = teams[awayTeamIndex]
                         val match = Match(session.id, homeTeam.id, awayTeam.id)
-                        if (hasScore && homeScore.isNotEmpty() && awayScore.isNotEmpty()) {
-                            match.setHomeScore(homeScore.toInt())
-                            match.setAwayScore(awayScore.toInt())
+                        if (hasScore && homeInt != null && awayInt != null) {
+                            match.setHomeScore(homeInt)
+                            match.setAwayScore(awayInt)
                             match.setStatus(Match.Status.FINISHED)
                         }
                         viewModel.addMatch(match, null)
                         onDismiss()
                     }
                 },
-                enabled = homeTeamIndex != awayTeamIndex
+                enabled = homeTeamIndex != awayTeamIndex && scoreValid
             ) {
                 Text("Add")
             }
@@ -582,6 +627,12 @@ fun EditMatchDialog(
     val homeTeam = teams.find { it.id == match.homeTeamId }
     val awayTeam = teams.find { it.id == match.awayTeamId }
 
+    val homeInt = homeScore.toIntOrNull()
+    val awayInt = awayScore.toIntOrNull()
+    val scoreError = if (homeInt != null && awayInt != null)
+        volleyballScoreError(homeInt, awayInt) else null
+    val scoreValid = homeInt != null && awayInt != null && scoreError == null
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Edit match") },
@@ -603,7 +654,8 @@ fun EditMatchDialog(
                         onValueChange = { homeScore = it.filter { c -> c.isDigit() } },
                         label = { Text("Home") },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        isError = scoreError != null
                     )
                     Text(":", fontWeight = FontWeight.Bold)
                     OutlinedTextField(
@@ -611,19 +663,30 @@ fun EditMatchDialog(
                         onValueChange = { awayScore = it.filter { c -> c.isDigit() } },
                         label = { Text("Away") },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        isError = scoreError != null
+                    )
+                }
+                if (scoreError != null) {
+                    Text(
+                        text = scoreError,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                match.setHomeScore(homeScore.toIntOrNull() ?: 0)
-                match.setAwayScore(awayScore.toIntOrNull() ?: 0)
-                match.setStatus(Match.Status.FINISHED)
-                viewModel.updateMatch(match)
-                onDismiss()
-            }) {
+            TextButton(
+                onClick = {
+                    match.setHomeScore(homeInt ?: 0)
+                    match.setAwayScore(awayInt ?: 0)
+                    match.setStatus(Match.Status.FINISHED)
+                    viewModel.updateMatch(match)
+                    onDismiss()
+                },
+                enabled = scoreValid
+            ) {
                 Text("Save")
             }
         },
@@ -633,6 +696,30 @@ fun EditMatchDialog(
             }
         }
     )
+}
+
+fun isValidVolleyballScore(home: Int, away: Int): Boolean {
+    val maxScore = maxOf(home, away)
+    val minScore = minOf(home, away)
+    val diff = maxScore - minScore
+
+    if (diff < 2) return false
+    if (maxScore < 25) return false
+    if (maxScore == 25) return minScore <= 23
+    return minScore >= 24 && diff == 2
+}
+
+fun volleyballScoreError(home: Int, away: Int): String? {
+    if (home == away) return "Score cannot be equal"
+    val maxScore = maxOf(home, away)
+    val minScore = minOf(home, away)
+    val diff = maxScore - minScore
+    if (maxScore < 25) return "Winner must reach at least 25"
+    if (diff < 2) return "Winner must lead by at least 2"
+    if (maxScore == 25 && minScore > 23) return "At 24:24 play continues until +2 lead"
+    if (maxScore > 25 && minScore < 24) return "Invalid score"
+    if (maxScore > 25 && diff != 2) return "Must win by exactly 2 after 24:24"
+    return null
 }
 
 @Composable
