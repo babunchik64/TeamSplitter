@@ -78,7 +78,7 @@ fun MainScreen() {
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.DateRange, contentDescription = "Story") },
-                    label = { Text("Story") },
+                    label = { Text("History") },
                     selected = currentRoute == NavRoutes.HISTORY,
                     onClick = {
                         navController.navigate(NavRoutes.HISTORY) {
